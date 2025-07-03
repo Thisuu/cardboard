@@ -1,0 +1,54 @@
+{
+  "type": "CountriesCollection",
+  "countries": [
+    {
+      "name": "USA",
+      "label": "United States",
+      "lat": "39.8283",
+      "lng": "-98.5795",
+      "url": "https://portfolio.metamask.io/assets/mexico-logo-DIZQa0xa.png"
+    },
+    {
+      "name": "GBR",
+      "label": "United Kingdom",
+      "lat": "55.3781",
+      "lng": "-3.4360"
+    },
+    {
+      "name": "CHE",
+      "label": "Switzerland",
+      "lat": "46.8139",
+      "lng": "8.2245"
+    },
+    {
+      "name": "BRA",
+      "label": "Brazil",
+      "lat": "-14.2350",
+      "lng": "-51.9253"
+    },
+    {
+      "name": "MEX",
+      "label": "Mexico",
+      "lat": "23.6345",
+      "lng": "-102.5528"
+    },
+    {
+      "name": "COL",
+      "label": "Colombia",
+      "lat": "4.5709",
+      "lng": "-74.2973"
+    },
+    {
+      "name": "EU",
+      "label": "European Union",
+      "lat": "52.0000",
+      "lng": "10.0000"
+    },
+    {
+      "name": "ARG",
+      "label": "Argentina",
+      "lat": "-38.4161",
+      "lng": "-63.6167"
+    }
+  ]
+}

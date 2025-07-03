@@ -81,6 +81,7 @@ typings/
 # Ignore development files, except index.html
 dist/*
 !dist/index.html
+!main.js
 
 # Gatsby files
 .cache/

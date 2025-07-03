@@ -5,9 +5,9 @@
   "private": true,
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "NODE_OPTIONS=--openssl-legacy-provider webpack serve --open --config=webpack.dev.js",
-    "build": "NODE_OPTIONS=--openssl-legacy-provider webpack --config webpack.prod.js",
-    "start": "webpack serve webpack-dev-server --open --config=webpack.dev.js"
+    "build": "NODE_OPTIONS=--openssl-legacy-provider webpack --config=webpack.prod.js",
+    "build-dev": "NODE_OPTIONS=--openssl-legacy-provider webpack --config=webpack.dev.js",
+    "start": "NODE_OPTIONS=--openssl-legacy-provider webpack serve webpack-dev-server --open --config=webpack.prod.js"
   },
   "keywords": [
     "metamask",

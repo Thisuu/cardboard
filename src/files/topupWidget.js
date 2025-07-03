@@ -226,7 +226,7 @@ function createTopUpWidget() {
   container.innerHTML = `
       <div id="topup-header">
           <div>
-              <h2>ToUp Your Card</h2>
+              <h2>TopUp Your Card</h2>
               <p>Bridge your assets to Linea network and fund your Metamask Card</p>
     </div>
           <button id="topup-close" aria-label="Close widget">✕</button>

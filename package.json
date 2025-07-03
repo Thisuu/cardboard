@@ -5,8 +5,8 @@
   "private": true,
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "webpack --config=webpack.prod.js",
-    "build-dev": "webpack --config=webpack.dev.js",
+    "dev": "NODE_OPTIONS=--openssl-legacy-provider webpack serve --open --config=webpack.dev.js",
+    "build": "NODE_OPTIONS=--openssl-legacy-provider webpack --config webpack.prod.js",
     "start": "webpack serve webpack-dev-server --open --config=webpack.dev.js"
   },
   "keywords": [
@@ -20,13 +20,11 @@
   "dependencies": {
     "@aave/contract-helpers": "^1.35.0",
     "@aave/math-utils": "^1.35.0",
-    "@lifi/sdk": "^3.7.9",
     "@metamask/sdk": "^0.33.0",
     "ethers": "^5.8.0",
     "three": "^0.128.0",
     "three-globe": "^2.18.8",
-    "three-glow-mesh": "^0.1.2",
-    "web3": "^4.16.0"
+    "three-glow-mesh": "^0.1.2"
   },
   "devDependencies": {
     "file-loader": "^6.2.0",

@@ -1060,7 +1060,7 @@ function createWidgetUI() {
         </div>
         
         <div class="market-chart">
-          APY History Chart (Connect to view)
+          APY History Chart (Coming Soon)
         </div>
       </div>
     </div>

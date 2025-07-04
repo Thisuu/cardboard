@@ -247,6 +247,9 @@ export function createLoginWaitlistButton() {
             const accounts = await metamaskSDKInstance.connect();
             if (accounts?.length) {
                 window.metamaskAccount = accounts[0];
+                // Clear cache to force fresh ENS lookup on first login
+                cachedDisplayName = null;
+                cachedDisplayName = await getDisplayName(accounts[0]);
                 await updateLoginButtonLabel();
                 const img = await fetchNftImage(accounts[0]);
                 nftImage.style.display = img ? 'block' : 'none';
@@ -273,16 +276,20 @@ export function createLoginWaitlistButton() {
 
             if (accounts?.length > 0) {
                 window.metamaskAccount = accounts[0];
+                // Clear cache to force fresh ENS lookup
+                cachedDisplayName = null;
                 cachedDisplayName = await getDisplayName(accounts[0]);
                 await updateLoginButtonLabel();
                 const img = await fetchNftImage(accounts[0]);
                 nftImage.style.display = img ? 'block' : 'none';
                 if (img) nftImage.src = img;
             } else {
+                // Auto-show login modal when no wallet is connected
                 await showConnectModal();
             }
         } catch (err) {
             console.warn('Silent reconnect failed:', err);
+            // Auto-show login modal on any error
             await showConnectModal();
         }
     };

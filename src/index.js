@@ -111,7 +111,7 @@ async function initializeApp() {
   // Initialize Web3 first
   const web3Connected = await initializeWeb3();
   
-  // Proceed with the rest of the app initialization
+  // Always initialize main UI components (regardless of wallet connection)
   loadFont();
   addGlobalStyles();
   initThreeJS();
@@ -119,40 +119,15 @@ async function initializeApp() {
   onWindowResize();
   animate();
   createMainLogo();
-  createLoginWaitlistButton();
+  createLoginWaitlistButton(); // This can run without wallet - it handles both states
 //  initializeFloatingImages(); //draw floating images
 
   const header = createHeader();
   
   const canvas = createParticleCanvas(); //effect
-initParticleAnimation(canvas);
+  initParticleAnimation(canvas);
   
-  // Initialize all widgets
-  if (web3Connected) {
-    try {
-      // Initialize all widgets
-      createCardLimitsWidget();
-      createCoinbackWidget();
-      createShoppingListWidget();
-      createTopUpWidget();
-      
-      // Initialize USDC strategy widget
-      const strategyInitialized = await createUSDCStrategyWidget();
-      
-      // Set up event listeners only after successful initialization
-      const strategyTrigger = document.getElementById('strategy-trigger');
-      if (strategyTrigger && strategyInitialized) {
-        strategyTrigger.addEventListener('click', (e) => {
-          e.preventDefault();
-          handleHeaderClick('usdc');
-        });
-      }
-    } catch (error) {
-      console.error('Widget initialization failed:', error);
-    }
-  }
-
-  // Set up other UI elements
+  // Set up header event listeners (always available)
   const allowanceTrigger = document.getElementById('allowance-trigger');
   if (allowanceTrigger) {
     allowanceTrigger.addEventListener('click', (e) => {
@@ -185,8 +160,33 @@ initParticleAnimation(canvas);
     });
   }
 
+  // Set up strategy trigger (always available)
+  const strategyTrigger = document.getElementById('strategy-trigger');
+  if (strategyTrigger) {
+    strategyTrigger.addEventListener('click', (e) => {
+      e.preventDefault();
+      handleHeaderClick('usdc');
+    });
+  }
+
   renderCardAvailability();
   addLineaFooter();
+  
+  // Initialize widgets only if wallet is connected
+  if (web3Connected) {
+    try {
+      // Initialize all widgets
+      createCardLimitsWidget();
+      createCoinbackWidget();
+      createShoppingListWidget();
+      createTopUpWidget();
+      
+      // Initialize USDC strategy widget
+      await createUSDCStrategyWidget();
+    } catch (error) {
+      console.error('Widget initialization failed:', error);
+    }
+  }
 }
 
 function createParticleCanvas() {

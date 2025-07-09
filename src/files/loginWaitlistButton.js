@@ -52,10 +52,66 @@ export function createLoginWaitlistButton() {
 
     const formatEnsName = (fullName) => fullName?.match(/^([^\.]+)\.linea\.eth$/)?.pop(); //We'll format Linea ENS and extract name
 
+    const showGetEnsModal = () => {
+        if (document.querySelector('.get-ens-modal-overlay')) return;
+        // Check if user previously cancelled
+        if (localStorage.getItem('lineaEnsModalCancelled') === 'true') return;
+        const overlay = document.createElement('div');
+        overlay.className = 'logout-modal-overlay get-ens-modal-overlay';
+
+        const modal = document.createElement('div');
+        modal.className = 'logout-modal';
+
+        const title = document.createElement('h2');
+        title.textContent = 'Get a Linea ENS Name?';
+        title.className = 'logout-modal-title';
+
+        const subtitle = document.createElement('p');
+        subtitle.innerHTML = `Hmm, It looks like you don’t own a Linea ENS name yet. Would you like to get one now?`;
+        subtitle.className = 'logout-modal-subtitle';
+
+        const buttonGroup = document.createElement('div');
+        buttonGroup.className = 'logout-modal-buttons';
+
+        const cancelBtn = document.createElement('button');
+        cancelBtn.textContent = 'Cancel';
+        cancelBtn.className = 'logout-cancel';
+
+        const getEnsBtn = document.createElement('button');
+        getEnsBtn.textContent = 'Get ENS';
+        getEnsBtn.className = 'logout-confirm get-ens-btn';
+
+        buttonGroup.append(cancelBtn, getEnsBtn);
+        modal.append(title, subtitle, buttonGroup);
+        overlay.appendChild(modal);
+        document.body.appendChild(overlay);
+
+        const removeModal = () => {
+            overlay.classList.remove('show');
+            setTimeout(() => {
+                overlay.remove();
+            }, 300);
+        };
+
+        overlay.classList.add('show');
+        cancelBtn.onclick = () => {
+            localStorage.setItem('lineaEnsModalCancelled', 'true');
+            removeModal();
+        };
+        getEnsBtn.onclick = () => {
+            window.open('https://names.linea.build/', '_blank');
+            removeModal();
+        };
+    };
+
     const getDisplayName = async (address) => {
         if (cachedDisplayName) return cachedDisplayName;
         try {
             const ensName = await getLineaEnsName(address);
+            if (!ensName) {
+                // Show ENS modal if not found and not previously cancelled
+                showGetEnsModal();
+            }
             const displayName = formatEnsName(ensName) || `${address.slice(0, 6)}...`;
             cachedDisplayName = displayName;
             return displayName;
@@ -502,6 +558,15 @@ export function createLoginWaitlistButton() {
         }
 
         .logout-cancel:hover { background: #f5cfcf; }
+        .get-ens-btn {
+            background: #61dfff !important;
+            color: #003a4d !important;
+            border: none;
+        }
+        .get-ens-btn:hover {
+            background: #2fcbe6 !important;
+            color: #00222c !important;
+        }
     `;
     document.head.appendChild(style);
 }

@@ -671,10 +671,64 @@ async function initializeContract() {
     currentPage = 0;
     isLoading = false;
 
-    // Check for deployed contract
-    const storedAddress = localStorage.getItem(`shoppingList_${userAddress}`);
+    // Check for deployed contract in localStorage
+    let storedAddress = localStorage.getItem(`shoppingList_${userAddress}`);
     let isDeployed = false;
-    
+
+    // If not found in localStorage, try to find contract on-chain using Lineascan API
+    if (!storedAddress) {
+        try {
+            console.log('Searching for existing shopping list contract for address:', userAddress);
+            // Use Lineascan API to find contract creation transactions (no API key required for basic requests)
+            const response = await fetch(`https://api.lineascan.build/api?module=account&action=txlist&address=${userAddress}&startblock=0&endblock=99999999&page=1&offset=50&sort=desc`);
+            
+            if (response.ok) {
+                const data = await response.json();
+                console.log('Lineascan API response:', data);
+                
+                if (data.status === '1' && data.result) {
+                    console.log('Found', data.result.length, 'transactions, searching for contract creation...');
+                    // Look for contract creation transactions
+                    for (const tx of data.result) {
+                        console.log('Checking transaction:', tx.hash, 'to:', tx.to, 'contractAddress:', tx.contractAddress);
+                        if (tx.to === '' && tx.contractAddress) {
+                            console.log('Found contract creation transaction:', tx.hash, 'contract:', tx.contractAddress);
+                            // This is a contract creation transaction
+                            try {
+                                // Verify it's our shopping list contract by checking bytecode
+                                const code = await signer.provider.getCode(tx.contractAddress);
+                                console.log('Contract bytecode length:', code.length);
+                                if (code && code.length > 1000) { // Basic check for our contract
+                                    console.log('Bytecode check passed, verifying contract interface...');
+                                    // Additional verification: try to call getItemCount() to ensure it's our contract
+                                    const testContract = new ethers.Contract(tx.contractAddress, SHOPPING_LIST_ABI, signer);
+                                    await testContract.getItemCount(); // This will throw if not our contract
+                                    storedAddress = tx.contractAddress;
+                                    localStorage.setItem(`shoppingList_${userAddress}`, storedAddress);
+                                    console.log('Found existing shopping list contract:', storedAddress);
+                                    break;
+                                } else {
+                                    console.log('Bytecode too short, skipping contract');
+                                }
+                            } catch (verifyError) {
+                                // Not our contract, continue searching
+                                console.log('Contract verification failed for:', tx.contractAddress, 'Error:', verifyError.message);
+                            }
+                        }
+                    }
+                } else {
+                    console.log('No transactions found or API error:', data.message || 'Unknown error');
+                }
+            } else {
+                console.log('Lineascan API request failed:', response.status, response.statusText);
+            }
+        } catch (err) {
+            console.warn('Could not scan for deployed shopping list contract via Lineascan:', err);
+        }
+    } else {
+        console.log('Found stored contract address:', storedAddress);
+    }
+
     if (storedAddress) {
         contract = new ethers.Contract(storedAddress, SHOPPING_LIST_ABI, signer);
         try {

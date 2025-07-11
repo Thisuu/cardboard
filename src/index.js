@@ -214,7 +214,7 @@ function createParticleCanvas() {
     btn.type = 'button';
     btn.setAttribute('aria-label', 'Disable particle animation');
     btn.style.position = 'fixed';
-    btn.style.bottom = '40px';
+    btn.style.bottom = '18px';
     btn.style.right = '18px';
     btn.style.zIndex = '10001';
     btn.style.background = 'rgba(255,255,255,0.85)';
@@ -520,23 +520,3 @@ if (document.readyState !== 'loading') {
 } else {
   document.addEventListener('DOMContentLoaded', initializeApp);
 }
-function showAppVersion() {
-  const versionDiv = document.createElement('div');
-  versionDiv.textContent = 'V0.12';
-  versionDiv.style.position = 'fixed';
-  versionDiv.style.bottom = '14px';
-  versionDiv.style.right = '18px';
-  versionDiv.style.background = 'rgba(240, 240, 245, 0.85)';
-  versionDiv.style.color = '#888';
-  versionDiv.style.fontSize = '12px';
-  versionDiv.style.fontWeight = '500';
-  versionDiv.style.letterSpacing = '0.5px';
-  versionDiv.style.padding = '2px 10px 2px 8px';
-  versionDiv.style.borderRadius = '7px 7px 7px 0';
-  versionDiv.style.boxShadow = '0 2px 8px rgba(0,0,0,0.04)';
-  versionDiv.style.zIndex = 99999;
-  versionDiv.style.fontFamily = 'Inter, sans-serif';
-  versionDiv.style.pointerEvents = 'none';
-  document.body.appendChild(versionDiv);
-}
-showAppVersion();

@@ -1059,8 +1059,8 @@ function createWidgetUI() {
           </div>
         </div>
         
-        <div class="market-chart">
-          APY History Chart (Coming Soon)
+        <div class="market-chart" id="usw-apy-chart-container">
+          <canvas id="usw-apy-chart" style="width:100%;height:120px;"></canvas>
         </div>
       </div>
     </div>
@@ -1847,6 +1847,7 @@ function setupEventListeners(container) {
         container.querySelector('#strategy-tab').style.display = 'none';
         container.querySelector('#market-tab').style.display = 'block';
         await loadMarketData();
+        renderAPYChart(); // <-- render chart
       }
     });
   });
@@ -2252,3 +2253,203 @@ function formatTransactionForMetaMask(txData, amount, tokenSymbol) {
 }
 
 export { openUSDCStrategyWidget, closeUSDCStrategyWidget, isUSDCStrategyWidgetOpen };
+
+// --- Chart.js APY Chart Integration ---
+let chartJsLoaded = false;
+let apyChartInstance = null;
+
+async function ensureChartJsLoaded() {
+  if (chartJsLoaded || window.Chart) return;
+  return new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js';
+    script.onload = () => {
+      chartJsLoaded = true;
+      resolve();
+    };
+    script.onerror = () => reject(new Error('Failed to load Chart.js'));
+    document.head.appendChild(script);
+  });
+}
+
+async function renderAPYChart() {
+  try {
+    // Inject spinner CSS if not present
+    if (!document.getElementById('cbw-spinner-style')) {
+      const style = document.createElement('style');
+      style.id = 'cbw-spinner-style';
+      style.textContent = `
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .usw-spinner {
+          display: inline-block;
+          width: 28px;
+          height: 28px;
+          border: 3px solid rgba(0, 0, 0, 0.10);
+          border-radius: 50%;
+          border-top-color: #0066FF;
+          animation: spin 1s ease-in-out infinite;
+          margin: 32px auto 16px auto;
+          vertical-align: middle;
+        }
+      `;
+      document.head.appendChild(style);
+    }
+    // Show spinner in chart area
+    const chartContainer = document.getElementById('usw-apy-chart-container');
+    if (chartContainer) {
+      chartContainer.innerHTML = '<div class="usw-spinner"></div><canvas id="usw-apy-chart" style="width:100%;height:120px;display:none;"></canvas>';
+    }
+    await ensureChartJsLoaded();
+    const ctx = document.getElementById('usw-apy-chart').getContext('2d');
+    // Compute timestamp for 14 days ago (only fetch last 14 days)
+    const now = Math.floor(Date.now() / 1000);
+    const fourteenDaysAgo = now - 14 * 24 * 60 * 60;
+    // Paginate to fetch enough entries for 14 days
+    let allItems = [];
+    let skip = 0;
+    const pageSize = 1000;
+    let keepFetching = true;
+    while (keepFetching) {
+      const query = `{
+        reserveParamsHistoryItems(
+          where: {
+            reserve_: { symbol: \"USDC\" },
+            timestamp_gte: ${fourteenDaysAgo}
+          },
+          orderBy: timestamp,
+          orderDirection: desc,
+          first: ${pageSize},
+          skip: ${skip}
+        ){
+          timestamp
+          liquidityRate
+        }
+      }`;
+      const response = await fetch('https://gateway.thegraph.com/api/abfbdeeac6a046de345dd2c83df6388b/subgraphs/id/Gz2kjnmRV1fQj3R8cssoZa5y9VTanhrDo4Mh7nWW1wHa', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query })
+      });
+      const data = await response.json();
+      const items = data?.data?.reserveParamsHistoryItems || [];
+      allItems = allItems.concat(items);
+      if (items.length < pageSize) {
+        keepFetching = false;
+      } else {
+        skip += pageSize;
+      }
+    }
+    // Remove duplicate timestamps (keep latest per timestamp)
+    const seen = new Set();
+    let items = allItems.filter(item => {
+      if (seen.has(item.timestamp)) return false;
+      seen.add(item.timestamp);
+      return true;
+    });
+    // Sort ascending by timestamp
+    items.sort((a, b) => a.timestamp - b.timestamp);
+    // Group by day (get last entry per day)
+    const byDay = {};
+    for (const item of items) {
+      const day = new Date(item.timestamp * 1000).toISOString().slice(0, 10);
+      // Always overwrite, so last in day wins (latest APY for the day)
+      byDay[day] = item;
+    }
+    // Get last 14 days, fill missing with previous value
+    const days = [];
+    const apys = [];
+    let lastApy = null;
+    let lastEntry = null;
+    for (let i = 13; i >= 0; i--) {
+      const d = new Date((now - i * 24 * 60 * 60) * 1000);
+      const day = d.toISOString().slice(0, 10);
+      days.push(day.slice(5)); // MM-DD
+      let apy = null;
+      let entry = null;
+      if (byDay[day]) {
+        // liquidityRate is ray (1e27), convert to APY: (liquidityRate/1e27)*100
+        const rate = Number(byDay[day].liquidityRate) / 1e27;
+        apy = (Math.pow(1 + rate / 31536000, 31536000) - 1) * 100;
+        lastApy = apy;
+        entry = byDay[day];
+        lastEntry = entry;
+      } else if (lastApy !== null) {
+        apy = lastApy;
+        entry = lastEntry;
+      } else {
+        apy = 0;
+        entry = null;
+      }
+      apys.push(Number(apy.toFixed(2)));
+      // Log the day, APY, and timestamp used
+      if (entry) {
+        console.log(`[APY Chart] Day: ${day}, APY: ${apy.toFixed(4)}%, Source timestamp: ${entry.timestamp} (${new Date(entry.timestamp * 1000).toISOString()})`);
+      } else {
+        console.log(`[APY Chart] Day: ${day}, APY: ${apy.toFixed(4)}%, Source: none`);
+      }
+    }
+    // Destroy previous chart if exists
+    if (apyChartInstance) {
+      apyChartInstance.destroy();
+    }
+    apyChartInstance = new window.Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: days,
+        datasets: [{
+          label: 'APY (%)',
+          data: apys,
+          borderColor: '#0066FF',
+          backgroundColor: 'rgba(0,102,255,0.08)',
+          fill: true,
+          tension: 0.3,
+          pointRadius: 2,
+          pointBackgroundColor: '#0066FF',
+          borderWidth: 2
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: ctx => `APY: ${ctx.parsed.y}%`
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: { display: false },
+            ticks: { color: '#888', font: { size: 11 } }
+          },
+          y: {
+            grid: { color: 'rgba(0,0,0,0.04)' },
+            ticks: {
+              color: '#888',
+              font: { size: 11 },
+              callback: v => v + '%'
+            },
+            beginAtZero: true
+          }
+        }
+      }
+    });
+    // After data is ready, hide spinner and show chart
+    if (chartContainer) {
+      document.getElementById('usw-apy-chart').style.display = 'block';
+      const spinner = chartContainer.querySelector('.usw-spinner');
+      if (spinner) spinner.style.display = 'none';
+    }
+  } catch (error) {
+    console.error('APY chart error:', error);
+    const container = document.getElementById('usw-apy-chart-container');
+    if (container) container.innerHTML = '<div style=\"color:#FF3B30;text-align:center;font-size:13px;\">Failed to load APY chart</div>';
+    // Hide spinner on error
+    const chartContainer = document.getElementById('usw-apy-chart-container');
+    if (chartContainer) {
+      const spinner = chartContainer.querySelector('.usw-spinner');
+      if (spinner) spinner.style.display = 'none';
+    }
+  }
+}
